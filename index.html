@@ -1,205 +1,238 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>skycast</title>
+    <title>SkyCast</title>
   </head>
-  <body class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+  <body class="text-gray-100">
 
-    <header class="sticky top-0 z-50 bg-white/90 dark:bg-gray-900/90 backdrop-blur border-b border-gray-200 dark:border-gray-800">
-      <nav class="max-w-7xl mx-auto flex items-center justify-between px-8 py-5">
-        <a href="index.html" class="text-3xl font-bold text-sky-600">☁️ SkyCast</a>
+    <div class="aurora-blob aurora-blob-1"></div>
+    <div class="aurora-blob aurora-blob-2"></div>
 
-        <ul class="hidden md:flex items-center gap-x-10 text-lg font-medium">
-          <li><a href="index.html" class="hover:text-sky-600">Accueil</a></li>
-          <li><a href="favorites.html" class="hover:text-sky-600">Favoris</a></li>
-          <li><a href="history.html" class="hover:text-sky-600">Historique</a></li>
-          <li><a href="settings.html" class="hover:text-sky-600">Paramètres</a></li>
-        </ul>
+    <div class="relative z-10">
 
-        <div class="flex items-center gap-6">
-          <button id="theme-toggle" aria-label="Basculer le thème">
-            <i data-lucide="moon" class="w-6 h-6 dark:hidden" id="moon-icon"></i>
-            <i data-lucide="sun" class="w-6 h-6 hidden dark:block" id="sun-icon"></i>
-          </button>
+      <header class="sticky top-0 z-50 bg-black/40 backdrop-blur-xl border-b border-white/10">
+        <nav class="max-w-7xl mx-auto flex items-center justify-between px-8 py-5">
+          <a href="index.html" class="text-3xl font-bold bg-gradient-to-r from-violet-400 to-emerald-400 bg-clip-text text-transparent">
+            ☁️ SkyCast
+          </a>
+
+          <ul class="hidden md:flex items-center gap-x-10 text-lg font-medium">
+            <li><a href="index.html" class="hover:text-violet-300 transition">Accueil</a></li>
+            <li><a href="favorites.html" class="hover:text-violet-300 transition">Favoris</a></li>
+            <li><a href="history.html" class="hover:text-violet-300 transition">Historique</a></li>
+            <li><a href="settings.html" class="hover:text-violet-300 transition">Paramètres</a></li>
+          </ul>
+
           <button id="menu-toggle" aria-label="Ouvrir le menu" aria-expanded="false" class="md:hidden">
             <i data-lucide="menu" class="w-7 h-7" id="menu-icon"></i>
             <i data-lucide="x" class="w-7 h-7 hidden" id="close-icon"></i>
           </button>
-        </div>
-      </nav>
+        </nav>
+        <ul id="mobile-menu" class="hidden md:hidden flex-col gap-3 px-8 pb-6 text-lg font-medium">
+          <li><a href="index.html" class="block py-2">Accueil</a></li>
+          <li><a href="favorites.html" class="block py-2">Favoris</a></li>
+          <li><a href="history.html" class="block py-2">Historique</a></li>
+          <li><a href="settings.html" class="block py-2">Paramètres</a></li>
+        </ul>
+      </header>
 
-      <ul id="mobile-menu" class="hidden md:hidden flex-col gap-3 px-8 pb-6 text-lg font-medium">
-        <li><a href="index.html" class="block py-2">Accueil</a></li>
-        <li><a href="favorites.html" class="block py-2">Favoris</a></li>
-        <li><a href="history.html" class="block py-2">Historique</a></li>
-        <li><a href="settings.html" class="block py-2">Paramètres</a></li>
-      </ul>
-    </header>
+      <main>
+        <section class="max-w-3xl mx-auto px-8 py-20 text-center">
+          <h1 class="text-4xl font-bold mb-10">
+            Consultez la météo de <span class="bg-gradient-to-r from-violet-400 to-emerald-400 bg-clip-text text-transparent">n'importe quelle ville</span>
+          </h1>
 
-    <main>
-      <section class="max-w-3xl mx-auto px-8 py-20 text-center">
-        <h1 class="text-4xl font-bold mb-10">Consultez la météo de n'importe quelle ville</h1>
+          <div class="relative mb-6">
+            <input
+              id="city-search-input"
+              type="text"
+              placeholder="Rechercher une ville..."
+              class="w-full pl-6 pr-16 py-4 text-lg rounded-full border border-white/10 bg-white/5 backdrop-blur-md text-gray-100 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+            />
+            <button id="search-btn" aria-label="Rechercher" class="absolute right-5 top-1/2 -translate-y-1/2 text-violet-300">
+              <i data-lucide="search" class="w-6 h-6"></i>
+            </button>
 
-        <div class="relative mb-6">
-          <input
-            id="city-search-input"
-            type="text"
-            placeholder="Rechercher une ville..."
-            class="w-full pl-6 pr-16 py-4 text-lg rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-sky-600"
-          />
-          <button id="search-btn" aria-label="Rechercher" class="absolute right-4 top-1/2 -translate-y-1/2">
-            <i data-lucide="search" class="w-6 h-6"></i>
+            <ul id="autocomplete-results" class="hidden absolute z-10 w-full bg-gray-950/95 backdrop-blur-xl border border-white/10 rounded-2xl mt-2 shadow-lg text-left text-lg"></ul>
+          </div>
+
+          <button id="geolocation-btn" class="inline-flex items-center gap-2 text-base text-emerald-400 hover:text-emerald-300 transition">
+            <i data-lucide="map-pin" class="w-5 h-5"></i>
+            Utiliser ma position
+          </button>
+        </section>
+
+        <section class="max-w-4xl mx-auto px-8 py-8">
+          <div id="weather-loading" class="text-center py-16 text-gray-400">
+            Chargement de la météo...
+          </div>
+
+          <div id="weather-error" class="hidden text-center py-16">
+            <p class="text-lg font-medium mb-4">⚠️ Impossible de récupérer les données météo.</p>
+            <button id="weather-retry-btn" class="bg-gradient-to-r from-violet-600 to-emerald-600 text-white px-6 py-3 rounded-full font-medium hover:opacity-90 transition">
+              Réessayer
+            </button>
+          </div>
+
+          <div id="weather-content" class="hidden weather-card-glow bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-8">
+
+            <div class="flex justify-between items-start mb-6">
+              <div>
+                <h2 id="weather-city" class="text-2xl font-bold"></h2>
+                <p id="weather-date" class="text-gray-400"></p>
+              </div>
+              <button id="favorite-toggle-btn" aria-label="Ajouter aux favoris" class="text-violet-300 hover:text-violet-200 transition">
+                <i data-lucide="star" class="w-6 h-6"></i>
+              </button>
+            </div>
+
+            <div class="text-center py-6">
+              <p id="weather-icon" class="text-7xl mb-2"></p>
+              <p id="weather-temp" class="text-7xl font-bold"></p>
+              <p id="weather-feelslike" class="text-gray-400 mt-2"></p>
+              <p id="weather-condition" class="text-lg mt-1"></p>
+            </div>
+
+            <div class="flex justify-center gap-8 text-sm text-gray-400 mb-8">
+              <span>Min : <span id="weather-min"></span></span>
+              <span>Max : <span id="weather-max"></span></span>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center mb-8">
+              <div>
+                <i data-lucide="droplet" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+                <p class="text-xs text-gray-400">Humidité</p>
+                <p id="weather-humidity" class="font-medium"></p>
+              </div>
+              <div>
+                <i data-lucide="wind" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+                <p class="text-xs text-gray-400">Vent</p>
+                <p id="weather-wind" class="font-medium"></p>
+              </div>
+              <div>
+                <i data-lucide="compass" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+                <p class="text-xs text-gray-400">Direction</p>
+                <p id="weather-wind-direction" class="font-medium"></p>
+              </div>
+              <div>
+                <i data-lucide="gauge" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+                <p class="text-xs text-gray-400">Pression</p>
+                <p id="weather-pressure" class="font-medium"></p>
+              </div>
+              <div>
+                <i data-lucide="eye" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+                <p class="text-xs text-gray-400">Visibilité</p>
+                <p id="weather-visibility" class="font-medium"></p>
+              </div>
+            </div>
+
+            <div class="flex flex-wrap justify-center gap-10 text-sm border-t border-white/10 pt-6 text-gray-300">
+              <div class="flex items-center gap-2">
+                <i data-lucide="sunrise" class="w-5 h-5 text-violet-300"></i>
+                <span id="weather-sunrise"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i data-lucide="sunset" class="w-5 h-5 text-violet-300"></i>
+                <span id="weather-sunset"></span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span id="weather-daynight"></span>
+                <span id="weather-local-time"></span>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <section class="max-w-4xl mx-auto px-8 py-8">
+          <h2 class="text-xl font-bold mb-4">Prévisions horaires</h2>
+
+          <div id="hourly-skeleton" class="flex gap-4 overflow-x-auto pb-2">
+            <div class="flex-shrink-0 w-20 h-28 bg-white/10 rounded-2xl animate-pulse"></div>
+            <div class="flex-shrink-0 w-20 h-28 bg-white/10 rounded-2xl animate-pulse"></div>
+            <div class="flex-shrink-0 w-20 h-28 bg-white/10 rounded-2xl animate-pulse"></div>
+            <div class="flex-shrink-0 w-20 h-28 bg-white/10 rounded-2xl animate-pulse"></div>
+          </div>
+
+          <div id="hourly-forecast-list" class="hidden flex gap-4 overflow-x-auto pb-2"></div>
+        </section>
+
+        <section class="max-w-4xl mx-auto px-8 py-8">
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-bold">Graphique</h2>
+
+            <div class="flex gap-2">
+              <button data-metric="temperature" class="chart-metric-btn active px-4 py-2 rounded-full text-sm font-medium border border-white/10">
+                Température
+              </button>
+              <button data-metric="precipitation" class="chart-metric-btn px-4 py-2 rounded-full text-sm font-medium border border-white/10 text-gray-400">
+                Précipitations
+              </button>
+              <button data-metric="wind" class="chart-metric-btn px-4 py-2 rounded-full text-sm font-medium border border-white/10 text-gray-400">
+                Vent
+              </button>
+            </div>
+          </div>
+
+          <div class="bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl p-4">
+            <canvas id="weather-chart" height="250"></canvas>
+          </div>
+        </section>
+
+        <section class="max-w-4xl mx-auto px-8 py-8">
+          <h2 class="text-xl font-bold mb-4">Prévisions sur 7 jours</h2>
+
+          <div id="daily-skeleton" class="space-y-2">
+            <div class="h-16 bg-white/10 rounded-2xl animate-pulse"></div>
+            <div class="h-16 bg-white/10 rounded-2xl animate-pulse"></div>
+            <div class="h-16 bg-white/10 rounded-2xl animate-pulse"></div>
+          </div>
+
+          <div id="daily-forecast-list" class="hidden space-y-2"></div>
+        </section>
+      </main>
+
+      <div id="day-detail-modal" class="hidden fixed inset-0 z-[70] bg-black/70 flex items-center justify-center px-4">
+        <div class="bg-gray-950/95 backdrop-blur-xl border border-white/10 rounded-3xl max-w-md w-full p-6 relative">
+          <button id="day-detail-close" aria-label="Fermer" class="absolute top-4 right-4 text-gray-400 hover:text-white transition">
+            <i data-lucide="x" class="w-5 h-5"></i>
           </button>
 
-          <ul id="autocomplete-results" class="hidden absolute z-10 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl mt-2 shadow-lg text-left text-lg"></ul>
-        </div>
+          <p id="day-detail-name" class="text-xl font-bold mb-1"></p>
+          <p id="day-detail-condition" class="text-gray-400 mb-4"></p>
 
-        <button id="geolocation-btn" class="inline-flex items-center gap-2 text-base text-sky-600 hover:underline">
-          <i data-lucide="map-pin" class="w-5 h-5"></i>
-          Utiliser ma position
-        </button>
-      </section>
-      <section class="max-w-4xl mx-auto px-8 py-8">
-        <!-- État : chargement -->
-        <div id="weather-loading" class="text-center py-16 text-gray-500">
-          Chargement de la météo...
-        </div>
-
-        <!-- État : erreur -->
-        <div id="weather-error" class="hidden text-center py-16">
-          <p class="text-lg font-medium mb-4">⚠️ Impossible de récupérer les données météo.</p>
-          <button id="weather-retry-btn" class="bg-sky-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-sky-700 transition">
-            Réessayer
-          </button>
-        </div>
-
-        <!-- État : contenu -->
-        <div id="weather-content" class="hidden border border-gray-200 dark:border-gray-800 rounded-2xl p-8">
-
-          <!-- En-tête : ville, date, favori -->
-          <div class="flex justify-between items-start mb-6">
-            <div>
-              <h2 id="weather-city" class="text-2xl font-bold"></h2>
-              <p id="weather-date" class="text-gray-500"></p>
-            </div>
-            <button id="favorite-toggle-btn" aria-label="Ajouter aux favoris">
-              <i data-lucide="star" class="w-6 h-6"></i>
-            </button>
+          <div class="text-center py-4">
+            <p id="day-detail-icon" class="text-6xl mb-2"></p>
+            <p class="text-lg">
+              <span id="day-detail-max" class="font-bold"></span>
+              <span id="day-detail-min" class="text-gray-400"></span>
+            </p>
           </div>
 
-          <!-- Bloc central : icône + température -->
-          <div class="text-center py-6">
-            <p id="weather-icon" class="text-7xl mb-2"></p>
-            <p id="weather-temp" class="text-7xl font-bold"></p>
-            <p id="weather-feelslike" class="text-gray-500 mt-2"></p>
-            <p id="weather-condition" class="text-lg mt-1"></p>
-          </div>
-
-          <!-- Min / Max -->
-          <div class="flex justify-center gap-8 text-sm text-gray-500 mb-8">
-            <span>Min : <span id="weather-min"></span></span>
-            <span>Max : <span id="weather-max"></span></span>
-          </div>
-
-          <!-- Grille de détails -->
-          <div class="grid grid-cols-2 md:grid-cols-5 gap-4 text-center mb-8">
+          <div class="grid grid-cols-3 gap-4 text-center mt-4 pt-4 border-t border-white/10">
             <div>
-              <i data-lucide="droplet" class="w-5 h-5 mx-auto mb-1"></i>
-              <p class="text-xs text-gray-500">Humidité</p>
-              <p id="weather-humidity" class="font-medium"></p>
+              <i data-lucide="droplet" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+              <p class="text-xs text-gray-400">Humidité</p>
+              <p id="day-detail-humidity" class="font-medium"></p>
             </div>
             <div>
-              <i data-lucide="wind" class="w-5 h-5 mx-auto mb-1"></i>
-              <p class="text-xs text-gray-500">Vent</p>
-              <p id="weather-wind" class="font-medium"></p>
+              <i data-lucide="wind" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+              <p class="text-xs text-gray-400">Vent</p>
+              <p id="day-detail-wind" class="font-medium"></p>
             </div>
             <div>
-              <i data-lucide="compass" class="w-5 h-5 mx-auto mb-1"></i>
-              <p class="text-xs text-gray-500">Direction</p>
-              <p id="weather-wind-direction" class="font-medium"></p>
-            </div>
-            <div>
-              <i data-lucide="gauge" class="w-5 h-5 mx-auto mb-1"></i>
-              <p class="text-xs text-gray-500">Pression</p>
-              <p id="weather-pressure" class="font-medium"></p>
-            </div>
-            <div>
-              <i data-lucide="eye" class="w-5 h-5 mx-auto mb-1"></i>
-              <p class="text-xs text-gray-500">Visibilité</p>
-              <p id="weather-visibility" class="font-medium"></p>
+              <i data-lucide="cloud-rain" class="w-5 h-5 mx-auto mb-1 text-emerald-400"></i>
+              <p class="text-xs text-gray-400">Pluie</p>
+              <p id="day-detail-rain" class="font-medium"></p>
             </div>
           </div>
-
-          <!-- Lever/coucher du soleil + heure locale -->
-          <div class="flex flex-wrap justify-center gap-10 text-sm border-t border-gray-200 dark:border-gray-800 pt-6">
-            <div class="flex items-center gap-2">
-              <i data-lucide="sunrise" class="w-5 h-5"></i>
-              <span id="weather-sunrise"></span>
-            </div>
-            <div class="flex items-center gap-2">
-              <i data-lucide="sunset" class="w-5 h-5"></i>
-              <span id="weather-sunset"></span>
-            </div>
-            <div class="flex items-center gap-2">
-              <span id="weather-daynight"></span>
-              <span id="weather-local-time"></span>
-            </div>
-          </div>
-
         </div>
-      </section>
-      <section class="max-w-4xl mx-auto px-8 py-8">
-        <h2 class="text-xl font-bold mb-4">Prévisions horaires</h2>
+      </div>
 
-        <!-- Skeleton pendant le chargement -->
-        <div id="hourly-skeleton" class="flex gap-4 overflow-x-auto pb-2">
-          <div class="flex-shrink-0 w-20 h-28 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-          <div class="flex-shrink-0 w-20 h-28 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-          <div class="flex-shrink-0 w-20 h-28 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-          <div class="flex-shrink-0 w-20 h-28 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-        </div>
-
-        <!-- Liste réelle, remplie en JS -->
-        <div id="hourly-forecast-list" class="hidden flex gap-4 overflow-x-auto pb-2"></div>
-      </section>
-      <section class="max-w-4xl mx-auto px-8 py-8">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-xl font-bold">Graphique</h2>
-
-          <div class="flex gap-2">
-            <button data-metric="temperature" class="chart-metric-btn active px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-700">
-              Température
-            </button>
-            <button data-metric="precipitation" class="chart-metric-btn px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-700">
-              Précipitations
-            </button>
-            <button data-metric="wind" class="chart-metric-btn px-4 py-2 rounded-lg text-sm font-medium border border-gray-300 dark:border-gray-700">
-              Vent
-            </button>
-          </div>
-        </div>
-
-        <div class="border border-gray-200 dark:border-gray-800 rounded-xl p-4">
-          <canvas id="weather-chart" height="250"></canvas>
-        </div>
-      </section>
-      <section class="max-w-4xl mx-auto px-8 py-8">
-        <h2 class="text-xl font-bold mb-4">Prévisions sur 7 jours</h2>
-
-        <!-- Skeleton pendant le chargement -->
-        <div id="daily-skeleton" class="space-y-2">
-          <div class="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-          <div class="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-          <div class="h-16 bg-gray-200 dark:bg-gray-700 rounded-xl animate-pulse"></div>
-        </div>
-
-        <!-- Liste réelle, remplie en JS -->
-        <div id="daily-forecast-list" class="hidden space-y-2"></div>
-      </section>
-    </main>
+    </div>
 
     <script type="module" src="/src/main.js"></script>
   </body>

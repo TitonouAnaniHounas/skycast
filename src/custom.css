@@ -1,3 +1,46 @@
+body {
+  position: relative;
+  overflow-x: hidden;
+  min-height: 100vh;
+  background: linear-gradient(160deg, #050604 0%, #0a1f16 35%, #1a0b2e 100%);
+  color: #f1f5f4;
+}
+
+.aurora-blob {
+  position: fixed;
+  border-radius: 50%;
+  filter: blur(120px);
+  opacity: 0.35;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.aurora-blob-1 {
+  top: -12%;
+  left: -10%;
+  width: 480px;
+  height: 480px;
+  background: #7c3aed;
+}
+
+.aurora-blob-2 {
+  bottom: -15%;
+  right: -12%;
+  width: 560px;
+  height: 560px;
+  background: #059669;
+}
+
+.weather-card-glow {
+  box-shadow: 0 0 70px -20px rgba(124, 58, 237, 0.35);
+}
+
+.chart-metric-btn.active {
+  background: linear-gradient(135deg, #7c3aed, #059669);
+  color: white;
+  border-color: transparent;
+}
+
 .chart-metric-btn.active {
   background-color: #0284c7;
   color: white;
