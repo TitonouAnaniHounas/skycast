@@ -1,24 +1,39 @@
 import { searchCity } from '../api/geocoding.js'
 import { fetchWeather } from '../api/weather.js'
 import { getWeatherInfo } from '../utils/weatherCodes.js'
-import { addToSearchHistory } from '../services/storage.js'
+import { addToSearchHistory, isFavorite, addFavorite, removeFavorite } from '../services/storage.js'
+import { formatTemp, formatWind, toDisplayTemp, toDisplayWind, tempUnitLabel, windUnitLabel } from '../utils/units.js'
+import { debounce } from '../utils/debounce.js'
 import Chart from 'chart.js/auto'
-
 
 let chartInstance = null
 let currentWeatherData = null
 let currentMetric = 'temperature'
+let currentCity = null
 
 export function initDashboard() {
   const searchInput = document.getElementById('city-search-input')
   const searchBtn = document.getElementById('search-btn')
 
-  if (!searchInput) return
+  if (!searchInput) return // pas sur index.html
 
   searchBtn.addEventListener('click', handleSearch)
   searchInput.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') handleSearch()
   })
+
+  searchInput.addEventListener('input', debounce(handleAutocomplete, 300))
+
+  document.addEventListener('click', (e) => {
+    const resultsList = document.getElementById('autocomplete-results')
+    if (!e.target.closest('#city-search-input') && !e.target.closest('#autocomplete-results')) {
+      resultsList.classList.add('hidden')
+    }
+  })
+
+  document.getElementById('geolocation-btn').addEventListener('click', handleGeolocation)
+  document.getElementById('favorite-toggle-btn').addEventListener('click', toggleFavorite)
+  document.getElementById('weather-retry-btn')?.addEventListener('click', handleSearch)
 
   document.querySelectorAll('.chart-metric-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
@@ -26,10 +41,35 @@ export function initDashboard() {
       btn.classList.add('active')
       currentMetric = btn.dataset.metric
       if (currentWeatherData) {
-        renderChart(currentWeatherData.hourly)
+        renderChart(currentWeatherData.hourly, currentWeatherData.utc_offset_seconds)
       }
     })
   })
+
+  document.getElementById('day-detail-close').addEventListener('click', () => {
+    document.getElementById('day-detail-modal').classList.add('hidden')
+  })
+
+  document.getElementById('day-detail-modal').addEventListener('click', (e) => {
+    if (e.target.id === 'day-detail-modal') {
+      e.target.classList.add('hidden')
+    }
+  })
+
+  // Arrivée depuis l'historique (index.html?lat=...&lon=...)
+  const params = new URLSearchParams(window.location.search)
+  const lat = params.get('lat')
+  const lon = params.get('lon')
+
+  if (lat && lon) {
+    const city = {
+      name: params.get('name') || '',
+      country: params.get('country') || '',
+      latitude: Number(lat),
+      longitude: Number(lon),
+    }
+    loadWeatherForCity(city)
+  }
 }
 
 async function handleSearch() {
@@ -53,6 +93,68 @@ async function handleSearch() {
   }
 }
 
+function handleGeolocation() {
+  if (!navigator.geolocation) {
+    showError()
+    return
+  }
+
+  showLoading()
+
+  navigator.geolocation.getCurrentPosition(
+    async (position) => {
+      const { latitude, longitude } = position.coords
+      const city = { name: 'Ma position', country: '', latitude, longitude }
+      await loadWeatherForCity(city)
+    },
+    () => {
+      showError()
+    }
+  )
+}
+
+async function handleAutocomplete() {
+  const query = document.getElementById('city-search-input').value.trim()
+  const resultsList = document.getElementById('autocomplete-results')
+
+  if (query.length < 2) {
+    resultsList.classList.add('hidden')
+    resultsList.innerHTML = ''
+    return
+  }
+
+  try {
+    const cities = await searchCity(query)
+
+    if (cities.length === 0) {
+      resultsList.classList.add('hidden')
+      return
+    }
+
+    resultsList.innerHTML = cities
+      .map(
+        (city, i) => `
+      <li data-index="${i}" class="autocomplete-item px-4 py-3 hover:bg-white/10 cursor-pointer border-b border-white/5 last:border-0">
+        ${city.name}${city.admin1 ? `, ${city.admin1}` : ''}, ${city.country}
+      </li>
+    `
+      )
+      .join('')
+
+    resultsList.classList.remove('hidden')
+
+    resultsList.querySelectorAll('.autocomplete-item').forEach((item, i) => {
+      item.addEventListener('click', () => {
+        resultsList.classList.add('hidden')
+        document.getElementById('city-search-input').value = ''
+        loadWeatherForCity(cities[i])
+      })
+    })
+  } catch (err) {
+    resultsList.classList.add('hidden')
+  }
+}
+
 async function loadWeatherForCity(city) {
   showLoading()
 
@@ -66,25 +168,93 @@ async function loadWeatherForCity(city) {
   }
 }
 
-function renderHourlyForecast(hourly) {
+function renderCurrentWeather(city, weather) {
+  currentCity = city
+  currentWeatherData = weather
+
+  const current = weather.current
+  const daily = weather.daily
+  const info = getWeatherInfo(current.weather_code)
+
+  document.getElementById('weather-city').textContent = `${city.name}, ${city.country}`
+  document.getElementById('weather-date').textContent = new Date().toLocaleDateString('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  })
+
+  document.getElementById('weather-icon').textContent = info.emoji
+  document.getElementById('weather-temp').textContent = formatTemp(current.temperature_2m)
+  document.getElementById('weather-feelslike').textContent = `Ressenti ${formatTemp(current.apparent_temperature)}`
+  document.getElementById('weather-condition').textContent = info.label
+
+  document.getElementById('weather-min').textContent = formatTemp(daily.temperature_2m_min[0])
+  document.getElementById('weather-max').textContent = formatTemp(daily.temperature_2m_max[0])
+
+  document.getElementById('weather-humidity').textContent = `${current.relative_humidity_2m}%`
+  document.getElementById('weather-wind').textContent = formatWind(current.wind_speed_10m)
+  document.getElementById('weather-wind-direction').textContent = getWindDirection(current.wind_direction_10m)
+  document.getElementById('weather-pressure').textContent = `${Math.round(current.surface_pressure)} hPa`
+  document.getElementById('weather-visibility').textContent = `${(current.visibility / 1000).toFixed(1)} km`
+
+  document.getElementById('weather-sunrise').textContent = formatTime(daily.sunrise[0])
+  document.getElementById('weather-sunset').textContent = formatTime(daily.sunset[0])
+
+  const cityTime = getCityLocalTime(weather.utc_offset_seconds)
+  document.getElementById('weather-local-time').textContent = cityTime
+  document.getElementById('weather-daynight').textContent = isDaytime(
+    weather.utc_offset_seconds,
+    daily.sunrise[0],
+    daily.sunset[0]
+  )
+    ? '☀️'
+    : '🌙'
+
+  renderHourlyForecast(weather.hourly, weather.utc_offset_seconds)
+  renderChart(weather.hourly, weather.utc_offset_seconds)
+  renderDailyForecast(weather.daily, weather.hourly)
+  updateFavoriteIcon()
+}
+
+function getCurrentHourIndex(times, utcOffsetSeconds) {
+  const cityNow = new Date(Date.now() + utcOffsetSeconds * 1000)
+  const cityNowPrefix = cityNow.toISOString().slice(0, 13)
+
+  const index = times.findIndex((t) => t.slice(0, 13) > cityNowPrefix)
+  return index === -1 ? 0 : index
+}
+
+function getCityLocalTime(utcOffsetSeconds) {
+  const cityNow = new Date(Date.now() + utcOffsetSeconds * 1000)
+  return cityNow.toISOString().slice(11, 16)
+}
+
+function isDaytime(utcOffsetSeconds, sunrise, sunset) {
+  const cityNow = new Date(Date.now() + utcOffsetSeconds * 1000)
+  const cityNowStr = cityNow.toISOString().slice(0, 16)
+  return cityNowStr > sunrise && cityNowStr < sunset
+}
+
+function renderHourlyForecast(hourly, utcOffsetSeconds) {
   const list = document.getElementById('hourly-forecast-list')
   const skeleton = document.getElementById('hourly-skeleton')
 
-  const next12Hours = hourly.time.slice(0, 12).map((time, i) => ({
+  const startIndex = getCurrentHourIndex(hourly.time, utcOffsetSeconds)
+  const next12Hours = hourly.time.slice(startIndex, startIndex + 12).map((time, i) => ({
     time,
-    temp: hourly.temperature_2m[i],
-    code: hourly.weather_code[i],
+    temp: hourly.temperature_2m[startIndex + i],
+    code: hourly.weather_code[startIndex + i],
   }))
 
   list.innerHTML = next12Hours
-    .map((hour) => {
+    .map((hour, i) => {
       const info = getWeatherInfo(hour.code)
       const label = new Date(hour.time).toLocaleTimeString('fr-FR', { hour: '2-digit' })
       return `
-        <div class="flex-shrink-0 w-20 flex flex-col items-center gap-1 bg-white/5 border border-white/10 rounded-2xl py-4">
+        <div class="flex-shrink-0 w-20 flex flex-col items-center gap-1 bg-white/5 border border-white/10 rounded-2xl py-4 animate-fade-in-scale" style="animation-delay: ${i * 0.05}s">
           <span class="text-xs text-gray-400">${label}</span>
           <span class="text-2xl">${info.emoji}</span>
-          <span class="font-medium">${Math.round(hour.temp)}°</span>
+          <span class="font-medium">${formatTemp(hour.temp)}</span>
         </div>
       `
     })
@@ -94,14 +264,29 @@ function renderHourlyForecast(hourly) {
   list.classList.remove('hidden')
 }
 
-function renderChart(hourly) {
+function renderChart(hourly, utcOffsetSeconds) {
   const canvas = document.getElementById('weather-chart')
-  const labels = hourly.time.slice(0, 12).map((t) => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit' }))
+  const startIndex = getCurrentHourIndex(hourly.time, utcOffsetSeconds)
+  const labels = hourly.time
+    .slice(startIndex, startIndex + 12)
+    .map((t) => new Date(t).toLocaleTimeString('fr-FR', { hour: '2-digit' }))
 
   const datasets = {
-    temperature: { data: hourly.temperature_2m.slice(0, 12), label: 'Température (°C)', color: '#a78bfa' },
-    precipitation: { data: hourly.precipitation.slice(0, 12), label: 'Précipitations (mm)', color: '#34d399' },
-    wind: { data: hourly.wind_speed_10m.slice(0, 12), label: 'Vent (km/h)', color: '#60a5fa' },
+    temperature: {
+      data: hourly.temperature_2m.slice(startIndex, startIndex + 12).map(toDisplayTemp),
+      label: `Température (${tempUnitLabel()})`,
+      color: '#a78bfa',
+    },
+    precipitation: {
+      data: hourly.precipitation.slice(startIndex, startIndex + 12),
+      label: 'Précipitations (mm)',
+      color: '#34d399',
+    },
+    wind: {
+      data: hourly.wind_speed_10m.slice(startIndex, startIndex + 12).map(toDisplayWind),
+      label: `Vent (${windUnitLabel()})`,
+      color: '#60a5fa',
+    },
   }
 
   const selected = datasets[currentMetric]
@@ -136,38 +321,94 @@ function renderChart(hourly) {
   })
 }
 
-function renderCurrentWeather(city, weather) {
-  currentWeatherData = weather
-  const current = weather.current
-  const daily = weather.daily
-  const info = getWeatherInfo(current.weather_code)
+function renderDailyForecast(daily, hourly) {
+  const list = document.getElementById('daily-forecast-list')
+  const skeleton = document.getElementById('daily-skeleton')
 
-  document.getElementById('weather-city').textContent = `${city.name}, ${city.country}`
-  document.getElementById('weather-date').textContent = new Date().toLocaleDateString('fr-FR', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
+  list.innerHTML = daily.time
+    .map((date, i) => {
+      const info = getWeatherInfo(daily.weather_code[i])
+      const dayLabel = i === 0 ? "Aujourd'hui" : new Date(date).toLocaleDateString('fr-FR', { weekday: 'long' })
+
+      return `
+        <button class="daily-forecast-item w-full flex items-center justify-between bg-white/5 border border-white/10 rounded-2xl px-4 py-3 hover:bg-white/10 transition text-left animate-fade-in-scale" style="animation-delay: ${i * 0.06}s" data-index="${i}">
+          <span class="w-28 font-medium capitalize">${dayLabel}</span>
+          <span class="text-2xl">${info.emoji}</span>
+          <span class="text-sm text-gray-400 flex-1 text-center">${info.label}</span>
+          <span class="text-sm">
+            <span class="font-medium">${formatTemp(daily.temperature_2m_max[i])}</span>
+            <span class="text-gray-400"> / ${formatTemp(daily.temperature_2m_min[i])}</span>
+          </span>
+        </button>
+      `
+    })
+    .join('')
+
+  list.querySelectorAll('.daily-forecast-item').forEach((btn) => {
+    btn.addEventListener('click', () => openDayDetail(Number(btn.dataset.index), daily, hourly))
   })
 
-  document.getElementById('weather-icon').textContent = info.emoji
-  document.getElementById('weather-temp').textContent = `${Math.round(current.temperature_2m)}°C`
-  document.getElementById('weather-feelslike').textContent = `Ressenti ${Math.round(current.apparent_temperature)}°C`
-  document.getElementById('weather-condition').textContent = info.label
+  skeleton.classList.add('hidden')
+  list.classList.remove('hidden')
+}
 
-  document.getElementById('weather-min').textContent = `${Math.round(daily.temperature_2m_min[0])}°C`
-  document.getElementById('weather-max').textContent = `${Math.round(daily.temperature_2m_max[0])}°C`
+function openDayDetail(index, daily, hourly) {
+  const info = getWeatherInfo(daily.weather_code[index])
+  const dateStr = daily.time[index]
 
-  document.getElementById('weather-humidity').textContent = `${current.relative_humidity_2m}%`
-  document.getElementById('weather-wind').textContent = `${Math.round(current.wind_speed_10m)} km/h`
-  document.getElementById('weather-wind-direction').textContent = getWindDirection(current.wind_direction_10m)
-  document.getElementById('weather-pressure').textContent = `${Math.round(current.surface_pressure)} hPa`
-  document.getElementById('weather-visibility').textContent = `${(current.visibility / 1000).toFixed(1)} km`
+  document.getElementById('day-detail-name').textContent =
+    index === 0 ? "Aujourd'hui" : new Date(dateStr).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
+  document.getElementById('day-detail-condition').textContent = info.label
+  document.getElementById('day-detail-icon').textContent = info.emoji
+  document.getElementById('day-detail-max').textContent = `${formatTemp(daily.temperature_2m_max[index])} `
+  document.getElementById('day-detail-min').textContent = `/ ${formatTemp(daily.temperature_2m_min[index])}`
+  document.getElementById('day-detail-rain').textContent = `${daily.precipitation_probability_max[index]}%`
 
-  document.getElementById('weather-sunrise').textContent = formatTime(daily.sunrise[0])
-  document.getElementById('weather-sunset').textContent = formatTime(daily.sunset[0])
-  document.getElementById('weather-local-time').textContent = formatTime(new Date().toISOString())
-  renderHourlyForecast(weather.hourly)
-  renderChart(weather.hourly)
+  const { avgHumidity, avgWind } = getDailyAverages(hourly, dateStr)
+  document.getElementById('day-detail-humidity').textContent = `${avgHumidity}%`
+  document.getElementById('day-detail-wind').textContent = formatWind(avgWind)
+
+  document.getElementById('day-detail-modal').classList.remove('hidden')
+}
+
+function getDailyAverages(hourly, dateStr) {
+  const indices = hourly.time
+    .map((t, i) => (t.startsWith(dateStr) ? i : -1))
+    .filter((i) => i !== -1)
+
+  const humidities = indices.map((i) => hourly.relative_humidity_2m[i])
+  const winds = indices.map((i) => hourly.wind_speed_10m[i])
+
+  const avgHumidity = Math.round(humidities.reduce((a, b) => a + b, 0) / humidities.length)
+  const avgWind = winds.reduce((a, b) => a + b, 0) / winds.length
+
+  return { avgHumidity, avgWind }
+}
+
+function updateFavoriteIcon() {
+  const btn = document.getElementById('favorite-toggle-btn')
+  const svg = btn.querySelector('svg')
+  const active = currentCity && isFavorite(currentCity)
+
+  svg.classList.toggle('fill-amber-400', active)
+  svg.classList.toggle('text-amber-400', active)
+}
+
+function toggleFavorite() {
+  if (!currentCity) return
+
+  if (isFavorite(currentCity)) {
+    removeFavorite(currentCity)
+  } else {
+    addFavorite(currentCity)
+  }
+
+  updateFavoriteIcon()
+
+  const btn = document.getElementById('favorite-toggle-btn')
+  btn.classList.remove('animate-pop')
+  void btn.offsetWidth
+  btn.classList.add('animate-pop')
 }
 
 function getWindDirection(degrees) {
@@ -195,5 +436,10 @@ function showError() {
 function showContent() {
   document.getElementById('weather-loading').classList.add('hidden')
   document.getElementById('weather-error').classList.add('hidden')
-  document.getElementById('weather-content').classList.remove('hidden')
+
+  const content = document.getElementById('weather-content')
+  content.classList.remove('hidden')
+  content.classList.remove('animate-fade-in-up')
+  void content.offsetWidth
+  content.classList.add('animate-fade-in-up')
 }

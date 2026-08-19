@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page introuvable — SkyCast</title>
+  </head>
+  <body class="text-gray-100">
+
+    <div class="aurora-blob aurora-blob-1"></div>
+    <div class="aurora-blob aurora-blob-2"></div>
+
+    <div class="relative z-10">
+
+      <header class="sticky top-0 z-50 bg-black/40 backdrop-blur-xl border-b border-white/10">
+        <nav class="max-w-7xl mx-auto flex items-center justify-between px-8 py-5">
+          <a href="index.html" class="text-3xl font-bold bg-gradient-to-r from-violet-400 to-emerald-400 bg-clip-text text-transparent">
+            ☁️ SkyCast
+          </a>
+          <ul class="hidden md:flex items-center gap-x-10 text-lg font-medium">
+            <li><a href="index.html" class="hover:text-violet-300 transition">Accueil</a></li>
+            <li><a href="favorites.html" class="hover:text-violet-300 transition">Favoris</a></li>
+            <li><a href="history.html" class="hover:text-violet-300 transition">Historique</a></li>
+            <li><a href="settings.html" class="hover:text-violet-300 transition">Paramètres</a></li>
+          </ul>
+          <button id="menu-toggle" aria-label="Ouvrir le menu" aria-expanded="false" class="md:hidden">
+            <i data-lucide="menu" class="w-7 h-7" id="menu-icon"></i>
+            <i data-lucide="x" class="w-7 h-7 hidden" id="close-icon"></i>
+          </button>
+        </nav>
+        <ul id="mobile-menu" class="hidden md:hidden flex-col gap-3 px-8 pb-6 text-lg font-medium">
+          <li><a href="index.html" class="block py-2">Accueil</a></li>
+          <li><a href="favorites.html" class="block py-2">Favoris</a></li>
+          <li><a href="history.html" class="block py-2">Historique</a></li>
+          <li><a href="settings.html" class="block py-2">Paramètres</a></li>
+        </ul>
+      </header>
+
+      <main>
+        <section class="max-w-xl mx-auto px-8 py-24 text-center">
+          <p class="text-7xl font-bold bg-gradient-to-r from-violet-400 to-emerald-400 bg-clip-text text-transparent mb-4">
+            404
+          </p>
+          <h1 class="text-2xl font-bold mb-4">Ville introuvable</h1>
+          <p class="text-gray-400 mb-10">
+            Nous n'avons pas trouvé la page que vous recherchez. Vérifiez l'adresse ou repartez de l'accueil.
+          </p>
+          <a href="index.html" class="inline-block bg-gradient-to-r from-violet-600 to-emerald-600 text-white px-8 py-3 rounded-full font-medium hover:opacity-90 transition">
+            Retour à l'accueil
+          </a>
+        </section>
+      </main>
+
+    </div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
